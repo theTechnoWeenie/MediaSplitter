@@ -78,6 +78,12 @@ namespace MediaSplitter
             foreach (MediaFile file in media)
             {
                 Log.WriteHeader($"Checking File \"{file.FileInfo.Name}\"");
+                if (file.EpisodeCount == 1)
+                {
+                    Log.WriteLine($"Skipping single episode");
+                    continue;
+                }
+
                 FFmpeg ffmpeg = new FFmpeg();
                 ffmpeg.OnFileRenamed += (originalName, newName) =>
                 {
@@ -96,16 +102,22 @@ namespace MediaSplitter
                 else
                 {
                     Log.WriteLine($"Using BlackScreenDetection to try to find the optimal place to cut.");
-                    var output = ffmpeg.BlackScreenInfo(file.FileInfo.FullName, Arguments.BlackDuration, Arguments.BlackThreshold, Arguments.BlackPixelLuminance).ToList();
+                    var output = ffmpeg.BlackScreenInfo(file.FileInfo.FullName, double.Parse(Arguments.BlackDuration), Arguments.BlackThreshold, Arguments.BlackPixelLuminance).ToList();
                     file.BlackScreenInfo.AddRange(this.CleanBlackScreenInfo(output));
+
+                    if (file.BlackScreenInfo.Count == 0)
+                    {
+                        Log.WriteLine($"No black screens found in file: {file.FileInfo.Name}, Does the break happen inside between {Arguments.StartRange} and {Arguments.EndRange}?");
+                        continue;
+                    }
 
                     foreach (var item in file.BlackScreenInfo)
                     {
                         Log.WriteLine($"[BlackScreen] Start: {item.StartTime} End: {item.EndTime} Duration: {item.Duration}");
                     }
-                    
+
                     // Since 2 episodes should have 1 cut, and 3 episodes 2 cuts we subtract one.
-                    if(file.BlackScreenInfo.Count > file.EpisodeCount - 1)
+                    if (file.BlackScreenInfo.Count != 0 && file.BlackScreenInfo.Count > file.EpisodeCount - 1)
                     {
                         Log.WriteLine($"The amount of black screens ({file.BlackScreenInfo.Count}) would cut into {file.BlackScreenInfo.Count + 1} files. Expected files is {file.EpisodeCount}.");
                         continue;

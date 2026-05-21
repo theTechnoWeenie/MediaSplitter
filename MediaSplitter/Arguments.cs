@@ -32,7 +32,7 @@ namespace MediaSplitter
         /// <summary>
         /// The minimum detected black duration (in seconds)
         /// </summary>
-        public double BlackDuration { get; set; } = 0.08;
+        public String BlackDuration { get; set; } = "0.08";
 
         /// <summary>
         /// Threshold for considering a picture as "Black" (in percent).
